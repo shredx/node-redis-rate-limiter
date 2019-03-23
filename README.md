@@ -1,4 +1,4 @@
-# Rate Limiter uisng Node.js & REDIS
+# Rate Limiter using Node.js & REDIS
 
 ## Intro
 
@@ -8,8 +8,11 @@ This application is using the [Node-API-Template](https://github.com/knaxus/node
 
 ## How to RUN
 
+- `git clone git@github.com:shredx/node-redis-rate-limiter.git`
 - `npm install`
 - `npm run dev`
+
+Note: Make sure REDIS is running
 
 ## Gotchas
 

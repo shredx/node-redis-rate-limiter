@@ -38,6 +38,6 @@ app.get('/', (req, res) => {
 
 app.use(allRoutes);
 
-app.listen(process.envPORT, () => logger.info(`App running at http://localhost:${process.env.PORT}`));
+app.listen(process.env.PORT, () => logger.info(`App running at http://localhost:${process.env.PORT}`));
 
 module.exports = app;
