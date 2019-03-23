@@ -1,24 +1,16 @@
 const jwt = require('jsonwebtoken');
 const logger = require('./logger');
 
-// if (
-//   !process.env.TOKEN_SECRET
-//   || !process.env.ACCESS_TOKEN_EXPIRY
-//   || !process.env.ACCESS_TOKEN_ALGO
-//   || !process.env.REFRESH_TOKEN_EXPIRY
-//   || !process.env.REFRESH_TOKEN_ALGO
-// ) {
-//   logger.error('Please set JWT ENV variables');
-//   process.exit(-1);
-// }
-
-logger.info({
-  a: process.env.TOKEN_SECRET,
-  b: process.env.ACCESS_TOKEN_EXPIRY,
-  c: process.env.REFRESH_TOKEN_EXPIRY,
-  d: process.env.REFRESH_TOKEN_EXPIRY,
-  e: process.env.REFRESH_TOKEN_ALGO,
-});
+if (
+  !process.env.TOKEN_SECRET
+  || !process.env.ACCESS_TOKEN_EXPIRY
+  || !process.env.ACCESS_TOKEN_ALGO
+  || !process.env.REFRESH_TOKEN_EXPIRY
+  || !process.env.REFRESH_TOKEN_ALGO
+) {
+  logger.error('Please set JWT ENV variables');
+  process.exit(-1);
+}
 
 const createAccessToken = data => jwt.sign(data, process.env.TOKEN_SECRET, {
   expiresIn: process.env.ACCESS_TOKEN_EXPIRY,

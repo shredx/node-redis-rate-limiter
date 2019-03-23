@@ -3,12 +3,13 @@ const requestValidator = require('express-validator');
 const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
-const { logger } = require('./utils');
 
 const result = dotenv.config();
 if (result.error) {
   throw result.error;
 }
+
+const { logger } = require('./utils');
 
 // Connect to DB
 require('./db/redis');
@@ -38,6 +39,8 @@ app.get('/', (req, res) => {
 
 app.use(allRoutes);
 
-app.listen(process.env.PORT, () => logger.info(`App running at http://localhost:${process.env.PORT}`));
+const PORT = process.env.PORT || 9090;
+
+app.listen(PORT, () => logger.info(`App running at http://localhost:${PORT}`));
 
 module.exports = app;
