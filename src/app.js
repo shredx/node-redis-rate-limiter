@@ -9,12 +9,9 @@ if (result.error) {
   throw result.error;
 }
 
+// custom modules should be loaded after loading of .env
+const PORT = process.env.PORT || 9090;
 const { logger } = require('./utils');
-
-// Connect to DB
-require('./db/redis');
-
-// custom modules
 const allRoutes = require('./routes');
 
 const app = express();
@@ -38,9 +35,6 @@ app.get('/', (req, res) => {
 });
 
 app.use(allRoutes);
-
-const PORT = process.env.PORT || 9090;
-
 app.listen(PORT, () => logger.info(`App running at http://localhost:${PORT}`));
 
 module.exports = app;
