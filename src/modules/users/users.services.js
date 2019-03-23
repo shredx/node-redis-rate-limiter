@@ -11,6 +11,9 @@ NotMoreKeysError.code = 403;
 const InvalidUserTypeError = new Error('tried to save invalid user type to redis');
 InvalidUserTypeError.code = 400;
 
+const InvalidSubscriptionKeyError = new Error('tried to save invalid subscription key to redis');
+InvalidSubscriptionKeyError.code = 400;
+
 const DuplicateUserError = new Error('User with email already exists in DB');
 DuplicateUserError.code = 409;
 
@@ -37,6 +40,25 @@ async function saveUserToRedis(user) {
       }
       return resolve(user);
     });
+  });
+}
+
+async function saveSubscriptionKeyToRedis(subscriptonKey) {
+  if (!subscriptonKey.key || !subscriptonKey.email) {
+    throw InvalidSubscriptionKeyError;
+  }
+
+  return new Promise((resolve, reject) => {
+    Redis.set(
+      `${subscriptonKey.email}:${subscriptonKey.key}`,
+      JSON.stringify(subscriptonKey),
+      (err) => {
+        if (err) {
+          return reject(err);
+        }
+        return resolve(subscriptonKey);
+      },
+    );
   });
 }
 
@@ -72,17 +94,22 @@ async function createSubscriptonKey({ email }) {
     throw UserNotFoundError;
   }
 
+  // create a key
+  const subscriptonKey = { email: user.email, key: uuid4(), usage: 10 };
+
   if (!user.subscriptonKey) {
-    user.subscriptonKey = [{ key: uuid4(), usage: 10 }];
+    user.subscriptonKey = [subscriptonKey];
+    await saveSubscriptionKeyToRedis(subscriptonKey);
+    await saveUserToRedis(user);
   } else if (user.subscriptonKey.length < 3) {
-    user.subscriptonKey.push({ key: uuid4(), usage: 5 });
+    // change the usage to 5
+    subscriptonKey.usage = 5;
+    user.subscriptonKey.push(subscriptonKey);
+    await saveSubscriptionKeyToRedis(subscriptonKey);
+    await saveUserToRedis(user);
   } else if (user.subscriptonKey.length === 3) {
     throw NotMoreKeysError;
   }
-
-  // save the user
-  await saveUserToRedis(user);
-
   return user;
 }
 
