@@ -49,16 +49,12 @@ async function saveSubscriptionKeyToRedis(subscriptonKey) {
   }
 
   return new Promise((resolve, reject) => {
-    Redis.set(
-      `${subscriptonKey.email}:${subscriptonKey.key}`,
-      JSON.stringify(subscriptonKey),
-      (err) => {
-        if (err) {
-          return reject(err);
-        }
-        return resolve(subscriptonKey);
-      },
-    );
+    Redis.set(`${subscriptonKey.key}`, JSON.stringify(subscriptonKey), (err) => {
+      if (err) {
+        return reject(err);
+      }
+      return resolve(subscriptonKey);
+    });
   });
 }
 

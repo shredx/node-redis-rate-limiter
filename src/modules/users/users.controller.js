@@ -43,7 +43,16 @@ async function createSubscriptionKeyController(req, res) {
   }
 }
 
+async function rateLimitedAPIcontroller(req, res) {
+  const data = {
+    time: +new Date(),
+    message: 'These are the milis from the epoch',
+  };
+  return sendResponse(res, 200, { ...data }, ResponseMessages.genericSuccess);
+}
+
 module.exports = {
   createNewUserController,
   createSubscriptionKeyController,
+  rateLimitedAPIcontroller,
 };
