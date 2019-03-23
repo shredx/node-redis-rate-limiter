@@ -98,18 +98,18 @@ async function createSubscriptonKey({ email }) {
   const subscriptonKey = { email: user.email, key: uuid4(), usage: 10 };
 
   if (!user.subscriptonKey) {
-    user.subscriptonKey = [subscriptonKey];
+    user.subscriptonKey = [];
     await saveSubscriptionKeyToRedis(subscriptonKey);
-    await saveUserToRedis(user);
   } else if (user.subscriptonKey.length < 3) {
     // change the usage to 5
     subscriptonKey.usage = 5;
-    user.subscriptonKey.push(subscriptonKey);
     await saveSubscriptionKeyToRedis(subscriptonKey);
-    await saveUserToRedis(user);
   } else if (user.subscriptonKey.length === 3) {
     throw NotMoreKeysError;
   }
+  delete subscriptonKey.email;
+  user.subscriptonKey.push(subscriptonKey);
+  await saveUserToRedis(user);
   return user;
 }
 
