@@ -13,8 +13,10 @@ function validateCreateUserRequest(req) {
 }
 
 function validateCreateSubscriptionKeyRequest(req) {
-  req.checkBody('userId', 'user Id is required').exists();
-
+  req
+    .checkBody('email', 'user email is required/invalid')
+    .isEmail()
+    .exists();
   return req.validationErrors();
 }
 

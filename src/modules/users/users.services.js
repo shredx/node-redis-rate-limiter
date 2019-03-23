@@ -52,22 +52,21 @@ async function createNewUser({ name, email }) {
 
   if (!userFromDB) {
     await saveUserToRedis(user);
-    return user;
-  }
-  if (userFromDB.email === email) {
+  } else if (userFromDB.email === email) {
     throw DuplicateUserError;
   }
+  return user;
 }
 
-async function createSubscriptonKey({ userId }) {
+async function createSubscriptonKey({ email }) {
   // if user is not in redis, throw error
   // if user is in redis, check the number of keys he is having
   // if user already has 3 keys, throw error
   // let user = null;
 
   // eslint-disable-next-line no-console
-  console.log('user id from request', userId);
-  const user = await getUserFromRedis(userId);
+  console.log('user id from request', email);
+  const user = await getUserFromRedis(email);
 
   if (!user) {
     throw UserNotFoundError;
