@@ -1,6 +1,6 @@
 const uuid4 = require('uuid/v4');
 const { Redis } = require('../../db');
-const { logger } = require('../../utils');
+// const { logger } = require('../../utils');
 
 const UserNotFoundError = new Error('User not found in REDIS');
 UserNotFoundError.code = 404;
@@ -8,20 +8,30 @@ UserNotFoundError.code = 404;
 const NotMoreKeysError = new Error('Cannot get more than 3 keys');
 NotMoreKeysError.code = 403;
 
-async function getUserFromRedis(userId) {
+const InvalidUserTypeError = new Error('tried to save invalid user type to redis');
+InvalidUserTypeError.code = 400;
+
+const DuplicateUserError = new Error('User with email already exists in DB');
+DuplicateUserError.code = 409;
+
+async function getUserFromRedis(email) {
   return new Promise((resolve, reject) => {
-    Redis.get(JSON.stringify(userId), (err, reply) => {
+    Redis.get(JSON.stringify(email), (err, reply) => {
       if (err) {
         return reject(err);
       }
-      return resolve(reply);
+      return resolve(JSON.parse(reply));
     });
   });
 }
 
 async function saveUserToRedis(user) {
+  if (!user.email) {
+    throw InvalidUserTypeError;
+  }
+
   return new Promise((resolve, reject) => {
-    Redis.set(JSON.stringify(user.id), JSON.stringify(user), (err) => {
+    Redis.set(JSON.stringify(user.email), JSON.stringify(user), (err) => {
       if (err) {
         return reject(err);
       }
@@ -34,19 +44,19 @@ async function createNewUser({ name, email }) {
   const user = {
     name,
     email,
-    id: uuid4(),
+    id: uuid4().substr(0, 6),
   };
 
-  logger.info(user);
+  // check if user exists in redis
+  const userFromDB = await getUserFromRedis(email);
 
-  Redis.set(JSON.stringify(user.id), JSON.stringify(user), (err, reply) => {
-    if (err) {
-      logger.error('Failed to create user in REDIS', err);
-      throw err;
-    }
-    logger.info('User saved in redis', reply);
-  });
-  return user;
+  if (!userFromDB) {
+    await saveUserToRedis(user);
+    return user;
+  }
+  if (userFromDB.email === email) {
+    throw DuplicateUserError;
+  }
 }
 
 async function createSubscriptonKey({ userId }) {
@@ -55,10 +65,9 @@ async function createSubscriptonKey({ userId }) {
   // if user already has 3 keys, throw error
   // let user = null;
 
+  // eslint-disable-next-line no-console
   console.log('user id from request', userId);
-  let user = await getUserFromRedis(userId);
-
-  user = JSON.parse(user);
+  const user = await getUserFromRedis(userId);
 
   if (!user) {
     throw UserNotFoundError;

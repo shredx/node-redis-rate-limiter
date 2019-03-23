@@ -2,6 +2,7 @@ const sendResponse = require('./sendResponse');
 const logger = require('./logger');
 
 function handleCustomThrow(res, error) {
+  // eslint-disable-next-line no-console
   console.log(error);
   logger.error(error);
   if (error.parent && error.parent.code === 'ER_DUP_ENTRY') {
@@ -17,6 +18,9 @@ function handleCustomThrow(res, error) {
     return sendResponse(res, error.code, {}, error.msg || error.message);
   }
   if (error.code === 404) {
+    return sendResponse(res, error.code, {}, error.msg || error.message);
+  }
+  if (error.code === 409) {
     return sendResponse(res, error.code, {}, error.msg || error.message);
   }
   return sendResponse(res, 500, {}, 'Something went wrong');
