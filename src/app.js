@@ -13,6 +13,7 @@ if (result.error) {
 // Let the config load
 const { MySQL } = require('./db');
 require('./db/mongodb');
+require('./db/redis');
 
 // custom modules
 const allRoutes = require('./routes');

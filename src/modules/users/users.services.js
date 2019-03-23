@@ -1,165 +1,84 @@
-const { MySQL } = require('../../db');
-const { hashPayload, jwt } = require('../../utils');
+const uuid4 = require('uuid/v4');
+const { Redis } = require('../../db');
+const { logger } = require('../../utils');
 
-async function createNewUser({
-  email, password, firstName, lastName,
-}) {
-  const hashedPassword = await hashPayload(password);
-  const user = await MySQL.sequelize.query(
-    'INSERT INTO users (email, password, first_name, last_name) VALUES (?, ?, ?, ?)',
-    {
-      type: MySQL.sequelize.QueryTypes.INSERT,
-      replacements: [email, hashedPassword, firstName, lastName],
-    },
-  );
-  return {
-    user: {
-      id: user[0],
-      email,
-      firstName,
-      lastName,
-    },
+const UserNotFoundError = new Error('User not found in REDIS');
+UserNotFoundError.code = 404;
+
+const NotMoreKeysError = new Error('Cannot get more than 3 keys');
+NotMoreKeysError.code = 403;
+
+async function getUserFromRedis(userId) {
+  return new Promise((resolve, reject) => {
+    Redis.get(JSON.stringify(userId), (err, reply) => {
+      if (err) {
+        return reject(err);
+      }
+      return resolve(reply);
+    });
+  });
+}
+
+async function saveUserToRedis(user) {
+  return new Promise((resolve, reject) => {
+    Redis.set(JSON.stringify(user.id), JSON.stringify(user), (err) => {
+      if (err) {
+        return reject(err);
+      }
+      return resolve(user);
+    });
+  });
+}
+
+async function createNewUser({ name, email }) {
+  const user = {
+    name,
+    email,
+    id: uuid4(),
   };
+
+  logger.info(user);
+
+  Redis.set(JSON.stringify(user.id), JSON.stringify(user), (err, reply) => {
+    if (err) {
+      logger.error('Failed to create user in REDIS', err);
+      throw err;
+    }
+    logger.info('User saved in redis', reply);
+  });
+  return user;
 }
 
-async function loginUser({ email, password }) {
-  const hashedPassword = await hashPayload(password);
+async function createSubscriptonKey({ userId }) {
+  // if user is not in redis, throw error
+  // if user is in redis, check the number of keys he is having
+  // if user already has 3 keys, throw error
+  // let user = null;
 
-  const res = await MySQL.sequelize.query('SELECT * FROM users WHERE email = ?', {
-    type: MySQL.sequelize.QueryTypes.SELECT,
-    replacements: [email],
-  });
+  console.log('user id from request', userId);
+  let user = await getUserFromRedis(userId);
 
-  // console.log('---res ---', res);
+  user = JSON.parse(user);
 
-  if (!res[0]) {
-    const err = new Error('User Not found');
-    err.code = 404;
-    err.msg = 'User not found in records';
-    throw err;
+  if (!user) {
+    throw UserNotFoundError;
   }
 
-  if (res[0].password !== hashedPassword) {
-    const msg = 'Error in Email/Password';
-    const err = new Error(msg);
-    err.code = 404;
-    err.msg = msg;
-    throw err;
+  if (!user.subscriptonKey) {
+    user.subscriptonKey = [{ key: uuid4(), usage: 10 }];
+  } else if (user.subscriptonKey.length < 3) {
+    user.subscriptonKey.push({ key: uuid4(), usage: 5 });
+  } else if (user.subscriptonKey.length === 3) {
+    throw NotMoreKeysError;
   }
 
-  const accessToken = jwt.createAccessToken({
-    id: res[0].id,
-    email: res[0].email,
-    mobile: res[0].mobile,
-    tokenType: 'LoginToken',
-  });
+  // save the user
+  await saveUserToRedis(user);
 
-  delete res[0].password;
-  delete res[0].created_at;
-  delete res[0].updated_at;
-
-  return {
-    user: res[0],
-    token: accessToken,
-  };
-}
-
-async function changeUserPassword({ userId, oldPassword, newPassword }) {
-  const res = await MySQL.sequelize.query('SELECT * FROM users WHERE id = ?', {
-    type: MySQL.sequelize.QueryTypes.SELECT,
-    replacements: [userId],
-  });
-
-  // console.log('---res ---', res);
-
-  if (!res[0]) {
-    const msg = 'User not found in records';
-    const err = new Error(msg);
-    err.code = 404;
-    err.msg = msg;
-    throw err;
-  }
-
-  if (res[0].is_active || res[0].is_blocked || res[0].is_deleted) {
-    const msg = 'User is not allowed to perform any action. Account is susspended';
-    const err = new Error(msg);
-    err.code = 403;
-    err.msg = msg;
-    throw err;
-  }
-
-  const oldHashedPassword = await hashPayload(oldPassword);
-
-  if (res[0].password !== oldHashedPassword) {
-    const msg = 'Incorrect credential, Not allowed';
-    const err = new Error(msg);
-    err.code = 401;
-    err.msg = msg;
-    throw err;
-  }
-
-  const newHashedPassword = await hashPayload(newPassword);
-  await MySQL.sequelize.query('UPDATE users SET password = ? WHERE id = ?', {
-    type: MySQL.sequelize.QueryTypes.UPDATE,
-    replacements: [newHashedPassword, userId],
-  });
-  return {};
-}
-
-async function changeUserEmail({
-  userId, oldEmail, newEmail, password,
-}) {
-  const res = await MySQL.sequelize.query('SELECT * FROM users WHERE id = ?', {
-    type: MySQL.sequelize.QueryTypes.SELECT,
-    replacements: [userId],
-  });
-
-  // console.log('---res ---', res[0]);
-
-  if (!res[0]) {
-    const msg = 'User not found in records';
-    const err = new Error(msg);
-    err.code = 404;
-    err.msg = msg;
-    throw err;
-  }
-
-  if (res[0].email !== oldEmail) {
-    const msg = 'Invalid userId and userEmail combination';
-    const err = new Error(msg);
-    err.code = 401;
-    err.msg = msg;
-    throw err;
-  }
-
-  if (res[0].is_active || res[0].is_blocked || res[0].is_deleted) {
-    const msg = 'User is not allowed to perform any action. Account is susspended';
-    const err = new Error(msg);
-    err.code = 403;
-    err.msg = msg;
-    throw err;
-  }
-
-  const hashedPassword = await hashPayload(password);
-
-  if (res[0].password !== hashedPassword) {
-    const msg = 'Incorrect credential, Not allowed';
-    const err = new Error(msg);
-    err.code = 401;
-    err.msg = msg;
-    throw err;
-  }
-
-  await MySQL.sequelize.query('UPDATE users SET email = ? WHERE id = ?', {
-    type: MySQL.sequelize.QueryTypes.UPDATE,
-    replacements: [newEmail, userId],
-  });
-  return {};
+  return user;
 }
 
 module.exports = {
   createNewUser,
-  loginUser,
-  changeUserPassword,
-  changeUserEmail,
+  createSubscriptonKey,
 };

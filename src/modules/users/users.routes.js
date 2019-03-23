@@ -1,15 +1,7 @@
 const userRoutes = require('express').Router();
-const {
-  loginUserController,
-  createNewUserController,
-  changeUserEmailController,
-  changeUserPasswordController,
-} = require('./users.controller');
-const isAuthenticated = require('../../middlewares/isAuthenticated');
+const { createNewUserController, createSubscriptionKeyController } = require('./users.controller');
 
-userRoutes.post('/users/login', loginUserController);
-userRoutes.post('/users/new', createNewUserController);
-userRoutes.patch('/users/email', isAuthenticated, changeUserEmailController);
-userRoutes.patch('/users/password', isAuthenticated, changeUserPasswordController);
+userRoutes.post('/users/', createNewUserController);
+userRoutes.post('/users/subscriptions', createSubscriptionKeyController);
 
 module.exports = userRoutes;

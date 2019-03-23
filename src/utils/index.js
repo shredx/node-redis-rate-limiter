@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const hashPayload = require('./hashPayload');
 const sendResponse = require('./sendResponse');
 const handleCustomError = require('./handleCustomErrors');
@@ -7,7 +8,6 @@ const {
   createaRefreshToken,
   decryptRefreshToken,
 } = require('./encryption');
-const logger = require('./logger');
 
 module.exports = {
   hashPayload,
