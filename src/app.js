@@ -10,9 +10,7 @@ if (result.error) {
   throw result.error;
 }
 
-// Let the config load
-const { MySQL } = require('./db');
-require('./db/mongodb');
+// Connect to DB
 require('./db/redis');
 
 // custom modules
@@ -38,14 +36,8 @@ app.get('/', (req, res) => {
   });
 });
 
-MySQL.sequelize
-  .sync()
-  .then(() => {
-    const { PORT } = process.env;
-    app.listen(PORT, () => logger.info(`App running at http://localhost:${PORT}`));
-  })
-  .catch(err => logger.log('error', err));
-
 app.use(allRoutes);
+
+app.listen(process.envPORT, () => logger.info(`App running at http://localhost:${process.env.PORT}`));
 
 module.exports = app;
