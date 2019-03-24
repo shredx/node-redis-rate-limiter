@@ -1,11 +1,10 @@
 const uuid4 = require('uuid/v4');
 const { Redis } = require('../../db');
-// const { logger } = require('../../utils');
 const {
   UserNotFoundError, InvalidSubscriptionKeyError,
   InvalidUserTypeError, DuplicateUserError, 
   NotMoreKeysError
-} = require('../../constants/errorResponse');
+} = require('../../constants/errors');
 
 const { getUserFromRedis, saveSubscriptionKeyToRedis, saveUserToRedis } = require('./utils');
 
