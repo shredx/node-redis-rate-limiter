@@ -1,62 +1,14 @@
 const uuid4 = require('uuid/v4');
 const { Redis } = require('../../db');
-// const { logger } = require('../../utils');
+const {
+  UserNotFoundError, InvalidSubscriptionKeyError,
+  InvalidUserTypeError, DuplicateUserError, 
+  NotMoreKeysError
+} = require('../../constants/errors');
 
-const UserNotFoundError = new Error('User not found in REDIS');
-UserNotFoundError.code = 404;
+const { getUserFromRedis, saveSubscriptionKeyToRedis, saveUserToRedis } = require('./utils');
 
-const NotMoreKeysError = new Error('Cannot get more than 3 keys');
-NotMoreKeysError.code = 403;
 
-const InvalidUserTypeError = new Error('tried to save invalid user type to redis');
-InvalidUserTypeError.code = 400;
-
-const InvalidSubscriptionKeyError = new Error('tried to save invalid subscription key to redis');
-InvalidSubscriptionKeyError.code = 400;
-
-const DuplicateUserError = new Error('User with email already exists in DB');
-DuplicateUserError.code = 409;
-
-async function getUserFromRedis(email) {
-  return new Promise((resolve, reject) => {
-    Redis.get(JSON.stringify(email), (err, reply) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve(JSON.parse(reply));
-    });
-  });
-}
-
-async function saveUserToRedis(user) {
-  if (!user.email) {
-    throw InvalidUserTypeError;
-  }
-
-  return new Promise((resolve, reject) => {
-    Redis.set(JSON.stringify(user.email), JSON.stringify(user), (err) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve(user);
-    });
-  });
-}
-
-async function saveSubscriptionKeyToRedis(subscriptonKey) {
-  if (!subscriptonKey.key || !subscriptonKey.email) {
-    throw InvalidSubscriptionKeyError;
-  }
-
-  return new Promise((resolve, reject) => {
-    Redis.set(`${subscriptonKey.key}`, JSON.stringify(subscriptonKey), (err) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve(subscriptonKey);
-    });
-  });
-}
 
 async function createNewUser({ name, email }) {
   const user = {
